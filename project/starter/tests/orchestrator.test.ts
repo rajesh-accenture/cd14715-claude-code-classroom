@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { ReviewReportSchema } from '../src/types/report-types';
+import { withRetry } from '../src/utils/error-handler';
+
+it('retries once and returns the successful result', async () => {
+  let attempts = 0;
+
+  const result = await withRetry(async () => {
+    attempts++;
+    if (attempts === 1) throw new Error('temporary failure');
+    return 'ok';
+  }, 1, 0);
+
+  expect(result).toBe('ok');
+  expect(attempts).toBe(2);
+});
 
 const validReport = {
   pullRequest: {

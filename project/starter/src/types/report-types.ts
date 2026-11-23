@@ -14,7 +14,7 @@ export const ReviewReportSchema = z.object({
   pullRequest: z.object({
     owner: z.string(),
     repo: z.string(),
-    number: z.number()
+    number: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)
   }),
   fileReviews: z.array(z.object({
     file: z.string(),
@@ -41,7 +41,6 @@ export const ReviewReportSchema = z.object({
     agentVersions: z.record(z.string())
   })
 });
-
 /**
  * TypeScript type inferred from Zod schema
  */
