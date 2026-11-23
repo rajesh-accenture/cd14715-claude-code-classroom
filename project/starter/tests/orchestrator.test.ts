@@ -1,53 +1,85 @@
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { ReviewReportSchema } from '../src/types/report-types';
 
+const validReport = {
+  pullRequest: {
+    owner: 'acme',
+    repo: 'sample',
+    number: 42
+  },
+  fileReviews: [{
+    file: 'src/example.ts',
+    codeQuality: {
+      file: 'src/example.ts',
+      issues: [],
+      overallScore: 95,
+      summary: 'No issues found.'
+    },
+    testCoverage: {
+      file: 'src/example.ts',
+      hasTests: true,
+      testFiles: ['tests/example.test.ts'],
+      untestedPaths: [],
+      coverageEstimate: 90,
+      summary: 'Core behavior is covered.'
+    },
+    refactorings: {
+      file: 'src/example.ts',
+      suggestions: [],
+      summary: 'No focused refactoring needed.'
+    }
+  }],
+  summary: {
+    totalFiles: 1,
+    overallScore: 95,
+    criticalIssues: 0,
+    highPriorityTests: 0,
+    refactoringOpportunities: 0
+  },
+  recommendations: [],
+  metadata: {
+    analyzedAt: '2026-11-23T10:00:00.000Z',
+    duration: 100,
+    agentVersions: {
+      codeQualityAnalyzer: 'sonnet'
+    }
+  }
+};
 
-/**
- * Tests for CodeReviewOrchestrator
- *
- * TODO: Implement these tests
- *
- * Tips:
- * - Use vitest mocking for MCP servers
- * - Mock rate limiter to avoid delays
- * - Test both success and failure paths
- */
-
-describe('CodeReviewOrchestrator', () => {
-  describe('Configuration', () => {
-    it('should initialize with default options', () => {
-    });
-
-    it('should accept custom rate limit configuration', () => {
-      // TODO: Create orchestrator with custom rate limits
-      // TODO: Verify custom limits are applied
-    });
+describe('ReviewReportSchema', () => {
+  it('accepts a valid report', () => {
+    expect(ReviewReportSchema.safeParse(validReport).success).toBe(true);
   });
 
-  describe('reviewPullRequest', () => {
-    it('should fetch PR files from GitHub MCP', async () => {
-     
+  it('rejects invalid pull request numbers', () => {
+    const result = ReviewReportSchema.safeParse({
+      ...validReport,
+      pullRequest: {
+        ...validReport.pullRequest,
+        number: -1
+      }
     });
 
-    it('should spawn all 3 subagents in parallel', async () => {
-  
-    });
-
-    it('should aggregate results into ReviewReport', async () => {
-  
-    });
-
-    it('should validate output with Zod schema', async () => {
-    });
-
- 
+    expect(result.success).toBe(false);
   });
 
+  it('rejects scores outside the allowed range', () => {
+    const invalid = structuredClone(validReport);
+    invalid.fileReviews[0].codeQuality.overallScore = 101;
 
-  describe('Integration', () => {
-    // These tests require actual API keys and should be skipped in CI
-    it.skip('should review a real small PR', async () => {
-      // TODO: Test with a real public PR
-      // NOTE: Only run manually with valid API keys
-    });
+    expect(ReviewReportSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects invalid finding severity values', () => {
+    const invalid = structuredClone(validReport);
+    invalid.fileReviews[0].codeQuality.issues = [{
+      line: 10,
+      severity: 'unknown',
+      category: 'bug-risk',
+      description: 'Invalid finding',
+      suggestion: 'Fix it'
+    }] as never[];
+
+    expect(ReviewReportSchema.safeParse(invalid).success).toBe(false);
   });
 });
