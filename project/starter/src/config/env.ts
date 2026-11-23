@@ -1,41 +1,33 @@
 import 'dotenv/config';
 
 export interface AppEnv {
-  provider: 'anthropic' | 'bedrock';
+  anthropicApiKey: string;
+  githubToken: string;
   model: string;
-  githubToken?: string;
 }
 
 export function validateEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
-  const model = env.ANTHROPIC_MODEL?.trim();
-  if (!model) {
-    throw new Error('ANTHROPIC_MODEL is required.');
-  }
+  const values = {
+    anthropicApiKey: env.ANTHROPIC_API_KEY?.trim(),
+    githubToken: env.GITHUB_TOKEN?.trim(),
+    model: env.ANTHROPIC_MODEL?.trim(),
+  };
 
-  const apiKey = env.ANTHROPIC_API_KEY?.trim();
-  const awsAccessKey = env.AWS_ACCESS_KEY_ID?.trim();
-  const awsSecretKey = env.AWS_SECRET_ACCESS_KEY?.trim();
+  const missing = Object.entries(values)
+    .filter(([, value]) => !value)
+    .map(([key]) => ({
+      anthropicApiKey: 'ANTHROPIC_API_KEY',
+      githubToken: 'GITHUB_TOKEN',
+      model: 'ANTHROPIC_MODEL',
+    })[key]);
 
-  let provider: AppEnv['provider'];
-
-  if (apiKey) {
-    provider = 'anthropic';
-    console.log('Using Anthropic API authentication');
-  } else if (awsAccessKey && awsSecretKey) {
-    if (!env.AWS_REGION?.trim()) {
-      throw new Error('AWS_REGION is required when using AWS Bedrock.');
-    }
-    provider = 'bedrock';
-    console.log('Using AWS Bedrock authentication');
-  } else {
-    throw new Error(
-      'Set ANTHROPIC_API_KEY or both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.'
-    );
+  if (missing.length) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
   return {
-    provider,
-    model,
-    githubToken: env.GITHUB_TOKEN?.trim() || undefined,
+    anthropicApiKey: values.anthropicApiKey!,
+    githubToken: values.githubToken!,
+    model: values.model!,
   };
 }
